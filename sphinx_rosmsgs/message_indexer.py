@@ -5,6 +5,33 @@ from .file_parser import FileParser
 
 
 class MessageIndexer:
+    r"""
+    The message indexer parses all the directory provided in a list of paths
+    searching for ``package.xml`` files and for indexing all messages in the 
+    directory.
+
+    The indexer keeps track of the relationship name source file and the relation
+    name type of message (`message`, `service` or `action`). From the name it is
+    possible to create a parser, that will read the whole file and parse it in
+    blocks, that will contain the comments and the definitions.
+
+    There exists a global indexer, which is created for interpoperation with sphinx,
+    but the indexer is independent with respect to the sphinx software.
+
+    Let's make an example: we have ``/path/to/package_0``, a ROS 2 package with file 
+    ``/path/to/package_0/package.xml`` and with a service file in the following path:
+    ``/path/to/package_0/srv/service_message.srv``. 
+    
+    If we pass to the indexer the following path list: ``["/path/to/package_0"]`` 
+    and the ``<name>package_0</name>`` tag is in the ``package.xml`` file, 
+    the indexer will have the following mapping between ``package_0/service_message`` 
+    and the ``/path/to/package_0/srv/service_message.srv`` file, and the type mapping 
+    between ``package_0/service_message`` to `service` string.
+
+    :param path_list: a list of path to the ROS packages to be included in the 
+                      indexer. There should be only one indexer.
+    """
+
     global_name = "__message__indexer__"
     message_ext = ".msg"
     service_ext = ".srv"
@@ -15,10 +42,26 @@ class MessageIndexer:
 
     @classmethod
     def register_global(klass, path_list):
+        r"""
+        Register a global indexer to be used by the shping extension. This global indexer is
+        kinda sort of singularity.
+
+        :return: the global MessageIndexer
+        :rtype: MessageIndexer
+        """
         globals()[klass.global_name] = klass(path_list)
+        return klass.retrieve_global()
 
     @classmethod
     def retrieve_global(klass):
+        r"""
+        Retrieve the global class::`MessageIndexer`. Raises an error if the global message indexer
+        was never registered, but in the sphinx extension case is registered when the event
+        of complete configuration is triggered.
+
+        :return: the global message indexer
+        :rtype: MessageIndexer
+        """
         return globals()[klass.global_name]
 
     @classmethod
@@ -40,12 +83,22 @@ class MessageIndexer:
         self.index_all()
 
     def index_all(self):
-        for path in self.path_list:
-            self.index_path(path)
-
-    def parse_package_xml(self, path):
         r"""
-        Extract current package name from package.xml ROS file
+        Index all the entries in the path list to create the maps.
+
+        This method is called inside the contructor.
+        """
+        for path in self.path_list:
+            self._index_path(path)
+
+    def _parse_package_xml(self, path):
+        r"""
+        Extract current package name from ``package.xml`` ROS file. It raises if
+        cannot find or cannot parse the ``package.xml`` file.
+
+        :param path: path of the package, where we search for ``package.xml``
+        :raise RuntimeError: when it cannot find the file or cannot parse it
+        :return: a string with the name of the package
         """
         package_xml = path / self.__class__.package_xml
         if not package_xml.exists():
@@ -61,17 +114,24 @@ class MessageIndexer:
             raise RuntimeError(err)
         return package_name
 
-    def index_path(self, path):
+    def _index_path(self, path):
         r"""
         Search for all messages in one of the provided path. In this way we have a mapping
-        between a file and its path. The user will put in the directive the name of the message
-        in ROS terms and we will extract directly the file name
+        between a file and its path. The user will put in the func::`get_path` method
+        the name of the message in ROS terms and we will extract directly the file 
+        name from the indexer. The indexer also scans the type using the extension of
+        the file. All the file with recognized extensions are extracted from the package 
+        path.
+
+        :param path: path of the package to scan
+        :raise RuntimeError: if the file has an invalid name for the message or the 
+                             package path does not exists
         """
         path = Path(path)
         if not path.exists():
             raise RuntimeError(f"The path `{path}` does not exists")
 
-        package_name = self.parse_package_xml(path)
+        package_name = self._parse_package_xml(path)
         
         for ext, msg_type, name_parser in zip(self.__class__.extension_list, 
                                               self.__class__.message_type_list,
@@ -85,25 +145,51 @@ class MessageIndexer:
                 self.index[name_str] = message
                 self.type_index[name_str] = msg_type
 
-    def __str__(self):
-        return_str = []
-        for key in self.index:
-            return_str.append(f" - {key} ({self.get_type(key)}) -> {self.get_path(key)}")
-        return "\n".join(return_str)
-
     def get_path(self, msg_name):
+        r"""
+        Return the path of a message, given its name.
+
+        :param msg_name: the message name in ROS terms
+        :return: the path of the file
+        :rtype: str
+        :raise KeyError: if the name does not exists
+        """
         return self.index[msg_name]
 
     def get_type(self, msg_name):
+        r"""
+        Return the type of a message, given its name and its file extension.
+
+        :param msg_name: the message name in ROS terms
+        :return: one of `message`, `service` or `action` string
+        :rtype: str
+        :raise KeyError: if the name does not exists
+        """
         return self.type_index[msg_name]
 
     def parse(self, name):
+        r"""
+        Returns a container with the complete parsed message. The container is also 
+        the parser.
+
+        :param name: the name of the message in ROS terms
+        :return: a file parser object that has already parsed the message
+        :rtype: FileParser
+        :raise KeyError: if the name does not exists in the index
+        """
         if name in self.index:
-            parser = FileParser(name, self)
+            parser = FileParser(name, self.get_path(name), self.get_type(name))
             parser.parse()
             return parser
     
     def parse_all(self):
+        r"""
+        Shorcut for running the parse on all the indexed messages
+
+        :return: a dictionary with message name pointing to corresponding
+                 class:`FileParser` objects
+        :rtype: dict
+        """
         file_parsers  = {}
         for name in self.index:
             file_parsers[name] = self.parse(name)
