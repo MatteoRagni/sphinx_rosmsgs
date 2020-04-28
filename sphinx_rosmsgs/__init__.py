@@ -1,6 +1,6 @@
-from .__version__ import __version__
-from .message_directive import MessageDirective
-from .message_indexer import MessageIndexer
+from sphinx_rosmsgs.__version__ import __version__
+from sphinx_rosmsgs.message_directive import MessageDirective
+from sphinx_rosmsgs.message_indexer import MessageIndexer
 
 
 def on_config_inited(app, *args):

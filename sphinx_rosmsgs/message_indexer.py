@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 import xml.etree.cElementTree as ElementTree
-from .file_parser import FileParser
+from sphinx_rosmsgs.file_parser import FileParser
 
 
 class MessageIndexer:

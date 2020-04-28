@@ -1,7 +1,7 @@
-from .comment_field import CommentField
-from .empty_line_field import EmptyLineField
-from .message_field import MessageField
-from .triple_dash_field import TripleDashField, FirstTripleDashField, SecondTripleDashField
+from sphinx_rosmsgs.file_parser.comment_field import CommentField
+from sphinx_rosmsgs.file_parser.empty_line_field import EmptyLineField
+from sphinx_rosmsgs.file_parser.message_field import MessageField
+from sphinx_rosmsgs.file_parser.triple_dash_field import TripleDashField, FirstTripleDashField, SecondTripleDashField
 
 
 class BlockParser:

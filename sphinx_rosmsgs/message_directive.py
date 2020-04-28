@@ -1,7 +1,7 @@
 from docutils import nodes
 from sphinx import addnodes
 from sphinx.util.docutils import SphinxDirective
-from .message_indexer import MessageIndexer
+from sphinx_rosmsgs.message_indexer import MessageIndexer
 from docutils.statemachine import ViewList
 from sphinx.util.nodes import nested_parse_with_titles
 import re
