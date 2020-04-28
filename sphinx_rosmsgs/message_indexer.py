@@ -72,8 +72,6 @@ class MessageIndexer:
         if not klass.is_init:
             klass.is_init = True
             klass.extension_list = [klass.message_ext, klass.service_ext, klass.action_ext]
-            klass.parser_base_string = lambda extension: f"(([a-zA-Z_0-9-\\.]+)\\/)+(?P<name>[a-zA-Z_0-9]+)\\{extension}"
-            klass.parser_list = [re.compile(klass.parser_base_string(ext)) for ext in klass.extension_list]
  
     def __init__(self, path_list):
         self.__class__.init_class()
@@ -133,15 +131,12 @@ class MessageIndexer:
 
         package_name = self._parse_package_xml(path)
         
-        for ext, msg_type, name_parser in zip(self.__class__.extension_list, 
-                                              self.__class__.message_type_list,
-                                              self.__class__.parser_list):
-            file_list = [str(path.as_posix()) for path in path.glob(f"**/*{ext}")]
+        for ext, msg_type in zip(self.__class__.extension_list, 
+                                              self.__class__.message_type_list):
+            file_list = [path for path in path.glob(f"**/*{ext}")]
             for message in file_list:
-                name_match = name_parser.match(message)
-                if name_match is None:
-                    raise RuntimeError(f"Cannot parse name for file `{message}`")
-                name_str = f"{package_name}/{name_match.group('name')}"
+                name_stem = str(message.stem)
+                name_str = f"{package_name}/{name_stem}"
                 self.index[name_str] = message
                 self.type_index[name_str] = msg_type
 
@@ -194,3 +189,9 @@ class MessageIndexer:
         for name in self.index:
             file_parsers[name] = self.parse(name)
         return file_parsers
+    
+    def __str__(self):
+        r = ""
+        for name in self.index:
+            r += f" -> {name} :: {self.get_type(name)} :: {self.get_path(name)}"
+        return r
