@@ -10,5 +10,5 @@ setup(name='sphinx_rosmsgs',
       author='Matteo Ragni',
       author_email='info@ragni.me',
       license='MIT',
-      packages=['sphinx_rosmsgs'],
+      packages=['sphinx_rosmsgs', 'sphinx_rosmsgs.file_parser'],
       zip_safe=False)
